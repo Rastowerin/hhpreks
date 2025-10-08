@@ -1,41 +1,31 @@
-import json
+from time import sleep
 
-from funcs import apply_to_vacancy, get_access_token, AUTH_CODE, RESUME, REDIRECT_URI
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
-def new_token():
-    token = get_access_token(AUTH_CODE, REDIRECT_URI)
-    with open('token.txt', 'w') as f:
-        f.write(token)
-    return token
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
+CHROME_BINARY = "/usr/bin/chromium"
 
-def get_token():
-    with open('token.txt', 'r') as f:
-        token = f.readline()
-    return token
-
-
+def start_browser_and_wait_for_login():
+    chrome_options = Options()
+    chrome_options.binary_location = CHROME_BINARY
+    chrome_options.add_argument("--start-maximized")
+    service = Service(CHROMEDRIVER_PATH)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver.get("https://spb.hh.ru/")
+    input("login and press Enter")
+    return driver
+ 
 if __name__ == "__main__":
+    driver = start_browser_and_wait_for_login()
 
-    with open("vacancies.json", "r") as f:
-        vacancies = json.loads(f.read())
+    with open("parsed", "r") as f:
+        ids = f.readlines()
+        ids = ids[::-1]
 
-    try:
-        token = get_token()
-    except Exception:
-        token = new_token()
-
-    for vacancy in vacancies:
-
-        retry = True
-        try:
-            res = apply_to_vacancy(token, vacancy['id'], RESUME)
-        except Exception as e:
-            if retry:
-                token = new_token()
-                res = apply_to_vacancy(token, vacancy['id'], RESUME)
-                retry = False
-            else:
-                raise e
-
-        print(res)
-
+    for id in ids:
+        link = f"https://spb.hh.ru/applicant/vacancy_response?vacancyId={id}&hhtmFrom=vacancy"
+        driver.get(link)
+        print(f"applied on id {id}")
+        sleep(1)        
